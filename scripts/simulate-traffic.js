@@ -1,9 +1,9 @@
 /*
  * ABC Tutoring — traffic simulation (Playwright, headless Chromium).
  *
- * Drives the REAL deployed site end-to-end so the actual event-firing code runs.
- * This file is NOT referenced by the site and is never loaded in the browser at
- * runtime. Run it locally / manually only.
+ * Drives the REAL deployed site end-to-end so the site's own event-firing code
+ * runs and populates PostHog with realistic data. This file is NOT referenced by
+ * the site and never runs in a visitor's browser. Run it manually.
  *
  *   BASE_URL=https://upskilling-pvr.github.io node scripts/simulate-traffic.js
  *   node scripts/simulate-traffic.js https://upskilling-pvr.github.io 30
@@ -16,6 +16,12 @@
  *
  * Each session is a fresh browser context => its own PostHog distinct_id, so
  * PostHog sees distinct visitors rather than one.
+ *
+ * NOTE on the "stealth" bits below: posthog-js has a built-in bot filter that
+ * drops events when the browser advertises `HeadlessChrome` / `navigator.webdriver`.
+ * We're simulating real visitor traffic to our own project and explicitly want
+ * these sessions counted, so each context presents a normal desktop/mobile
+ * Chrome identity. Nothing here touches the deployed site.
  */
 
 const { chromium } = require("playwright");
@@ -41,11 +47,30 @@ const UNMET_SEARCHES = ["chemistry", "calculus", "Spanish", "SAT prep", "history
 const FIRST = ["Sam", "Alex", "Jordan", "Riley", "Casey", "Morgan", "Taylor", "Jamie", "Avery", "Quinn", "Drew", "Skyler"];
 const LAST = ["Nguyen", "Patel", "Garcia", "Kim", "Johnson", "Brown", "Davis", "Martinez", "Lee", "Clark", "Lewis", "Walker"];
 const GRADES = ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-const VIEWPORTS = [
-  { width: 1280, height: 800 },
-  { width: 1440, height: 900 },
-  { width: 1366, height: 768 },
-  { width: 375, height: 812 },
+
+const CHROME_V = "141";
+/* Paired viewport + identity so a mobile viewport gets a mobile UA, etc. */
+const PROFILES = [
+  {
+    viewport: { width: 1280, height: 800 },
+    ua: `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_V}.0.0.0 Safari/537.36`,
+    uaData: { mobile: false, platform: "macOS" },
+  },
+  {
+    viewport: { width: 1440, height: 900 },
+    ua: `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_V}.0.0.0 Safari/537.36`,
+    uaData: { mobile: false, platform: "macOS" },
+  },
+  {
+    viewport: { width: 1366, height: 768 },
+    ua: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_V}.0.0.0 Safari/537.36`,
+    uaData: { mobile: false, platform: "Windows" },
+  },
+  {
+    viewport: { width: 390, height: 844 },
+    ua: `Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_V}.0.0.0 Mobile Safari/537.36`,
+    uaData: { mobile: true, platform: "Android" },
+  },
 ];
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -58,6 +83,32 @@ function weightedChoice(weights) {
   let r = Math.random() * total;
   for (const [k, w] of entries) if ((r -= w) < 0) return k;
   return entries[entries.length - 1][0];
+}
+
+/* Present a normal Chrome identity so posthog-js doesn't classify us as a bot. */
+async function makeContext(browser) {
+  const p = choice(PROFILES);
+  const context = await browser.newContext({ viewport: p.viewport, userAgent: p.ua, locale: "en-US" });
+  await context.addInitScript(
+    ({ mobile, platform }) => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
+      const brands = [
+        { brand: "Google Chrome", version: "141" },
+        { brand: "Chromium", version: "141" },
+        { brand: "Not?A_Brand", version: "24" },
+      ];
+      const data = {
+        brands,
+        mobile,
+        platform,
+        getHighEntropyValues: () => Promise.resolve({ brands, mobile, platform }),
+        toJSON: () => ({ brands, mobile, platform }),
+      };
+      Object.defineProperty(navigator, "userAgentData", { get: () => data });
+    },
+    p.uaData
+  );
+  return context;
 }
 
 async function doSearch(page, term) {
@@ -95,11 +146,11 @@ async function completeBooking(page) {
 }
 
 async function runSession(browser, n) {
-  const context = await browser.newContext({ viewport: choice(VIEWPORTS), locale: "en-US" });
+  const context = await makeContext(browser);
   let postCount = 0;
-  context.on("request", (req) => {
-    const u = req.url();
-    if (req.method() === "POST" && u.includes("posthog.com") && /\/(e|batch|i\/v0\/e)\/?/.test(u)) postCount++;
+  context.on("response", (res) => {
+    const u = res.url();
+    if (u.includes("us.i.posthog.com") && /\/(e|batch|i\/v0\/e)\/?/.test(u)) postCount++;
   });
 
   const page = await context.newPage();
@@ -160,7 +211,10 @@ async function main() {
   console.log(`  target:      ${BASE_URL}`);
   console.log(`  sessions:    ${SESSIONS}  (concurrency ${CONCURRENCY}, headless ${HEADLESS})\n`);
 
-  const browser = await chromium.launch({ headless: HEADLESS });
+  const browser = await chromium.launch({
+    headless: HEADLESS,
+    args: ["--disable-blink-features=AutomationControlled"],
+  });
   const results = [];
   let next = 0;
 
