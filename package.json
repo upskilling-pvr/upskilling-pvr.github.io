@@ -1,0 +1,13 @@
+{
+  "name": "abc-tutoring-traffic-sim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Headless-browser traffic simulation for the ABC Tutoring prototype. NOT part of the deployed site — run locally/manually only.",
+  "scripts": {
+    "sim": "node scripts/simulate-traffic.js",
+    "postinstall-note": "echo 'Run: npx playwright install chromium'"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}
