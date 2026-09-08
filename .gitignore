@@ -1,0 +1,8 @@
+# Internal assessment brief — do not publish
+abc-tutoring-project-spec.md
+
+# OS / editor cruft
+.DS_Store
+
+# Node (traffic simulation, added in a later phase)
+node_modules/

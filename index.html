@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>ABC Tutoring — friendly help with math, science &amp; reading</title>
+  <meta name="description" content="Book a one-on-one session with an ABC Tutoring tutor for elementary math through Algebra II, science, and early reading." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="assets/js/config.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">ABC<span>·</span>Tutoring</a>
+      <span class="brand-tag">One-on-one help that clicks</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Friendly, one-on-one tutoring for your child</h1>
+      <p>
+        ABC Tutoring pairs students with patient, experienced tutors for
+        elementary math through Algebra II, science, and early reading.
+        Pick a tutor, choose a time that works, and book in under a minute.
+      </p>
+    </section>
+
+    <section class="search">
+      <form id="search-form" role="search">
+        <label for="search-input" class="hidden">Search subjects</label>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search a subject — e.g. algebra, reading, biology"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn">Search</button>
+        <button type="button" id="search-reset" class="btn ghost hidden">Show all</button>
+      </form>
+      <p id="search-status" class="search-status hidden"></p>
+      <div id="not-offered" class="panel info hidden">
+        <h3>We don't currently offer “<span id="not-offered-query"></span>”</h3>
+        <p>
+          That's not a subject our tutors cover right now — but we've noted your
+          interest. If enough families ask, it's something ABC Tutoring can look
+          at adding.
+        </p>
+        <p class="muted">In the meantime, browse the tutors we do have below.</p>
+      </div>
+    </section>
+
+    <h2 class="section-title">Our tutors</h2>
+    <section id="tutor-grid" class="grid"></section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      ABC Tutoring · Booking online for the first time — call Dana anytime to
+      change or cancel a session.
+    </div>
+  </footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/home.js"></script>
+</body>
+</html>
